@@ -1,0 +1,25 @@
+{
+  "name": "kosmtik-tiles-export",
+  "version": "0.0.1",
+  "description": "Export tiles tree from your Kosmtik project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/kosmtik/kosmtik-tiles-export.git"
+  },
+  "keywords": [
+    "kosmtik",
+    "openstreetmap",
+    "tiles"
+  ],
+  "author": "Yohan Boniface",
+  "license": "WTFPL",
+  "bugs": {
+    "url": "https://github.com/kosmtik/kosmtik-tiles-export/issues"
+  },
+  "homepage": "https://github.com/kosmtik/kosmtik-tiles-export",
+  "kosmtik": "~0.0.5"
+}
