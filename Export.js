@@ -14,7 +14,7 @@ util.inherits(TilesExporter, BaseExporter);
 
 TilesExporter.prototype.export = function (callback) {
     var bounds;
-    if (this.options.bounds) bounds = this.options.bounds.split(',').map(function (x) {return +x;})
+    if (this.options.bounds) bounds = this.options.bounds.split(',').map(function (x) {return +x;});
     else bounds = this.project.mml.bounds;
     this.project.mml.metatile = 1;  // Force for now, no metatile support.
     if (!this.options.output) return this.log('Missing destination dir. Use --output <path/to/dir>');
@@ -23,34 +23,34 @@ TilesExporter.prototype.export = function (callback) {
     this.log('Starting tiles export, with bounds', bounds, 'and from zoom', this.options.minZoom, 'to', this.options.maxZoom);
     var mapPool = this.project.createMapPool();
     for (var i = this.options.minZoom; i <= this.options.maxZoom; i++) {
-        this.processZoom(i, bounds, mapPool);
-    };
+        this.processZoom(i, bounds, mapPool, this.project);
+    }
     mapPool.drain(function() {
         mapPool.destroyAllNow();
     });
 };
 
-TilesExporter.prototype.processZoom = function (zoom, bounds, mapPool) {
+TilesExporter.prototype.processZoom = function (zoom, bounds, mapPool, project) {
     var leftTop = zoomLatLngToXY(zoom, bounds[3], bounds[0]),
         rightBottom = zoomLatLngToXY(zoom, bounds[1], bounds[2]),
         self = this;
     this.log('Processing zoom', zoom);
-    var count = (rightBottom[0] - leftTop[0] + 1) * (rightBottom[1] - leftTop[1] + 1)
+    var count = (rightBottom[0] - leftTop[0] + 1) * (rightBottom[1] - leftTop[1] + 1);
     this.log(count, 'tiles to process');
     for (var x = leftTop[0]; x <= rightBottom[0]; x++) {
         for (var y = leftTop[1]; y <= rightBottom[1]; y++) {
-            self.processTile(mapPool, zoom, x, y);
+            self.processTile(zoom, x, y, mapPool, project);
         }
     }
 };
 
-TilesExporter.prototype.processTile = function (mapPool, zoom, x, y) {
+TilesExporter.prototype.processTile = function (zoom, x, y, mapPool, project) {
     var self = this;
     mapPool.acquire(function (err, map) {
         if (err) throw err;
         var tile = new Tile(zoom, x, y),
             filepath = path.join(self.options.output, zoom.toString(), x.toString(), y + '.png');
-        return tile.render(map, function (err, im) {
+        return tile.render(project, map, function (err, im) {
             if (err) throw err;
             im.encode('png', function (err, buffer) {
                 if (err) throw err;
