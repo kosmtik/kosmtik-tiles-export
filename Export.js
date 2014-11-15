@@ -1,7 +1,7 @@
 var util = require('util'),
     fs = require('fs'),
     path = require('path'),
-    Tile = require(path.join(kosmtik.src, 'back/Tile.js')).Tile,
+    MetatileBasedTile = require(path.join(kosmtik.src, 'back/MetatileBasedTile.js')).Tile,
     mkdirs = require(path.join(kosmtik.src, 'back/Utils.js')).mkdirs,
     zoomLatLngToXY = require(path.join(kosmtik.src, 'back/GeoUtils.js')).zoomLatLngToXY,
     BaseExporter = require(path.join(kosmtik.src, 'plugins/base-exporters/Base.js')).BaseExporter;
@@ -16,7 +16,6 @@ TilesExporter.prototype.export = function (callback) {
     var bounds;
     if (this.options.bounds) bounds = this.options.bounds.split(',').map(function (x) {return +x;});
     else bounds = this.project.mml.bounds;
-    this.project.mml.metatile = 1;  // Force for now, no metatile support.
     if (!this.options.output) return this.log('Missing destination dir. Use --output <path/to/dir>');
     this.log('Starting tiles export to', this.options.output);
     if (this.options.minZoom > this.options.maxZoom) return this.log('Invalid zooms');
@@ -48,7 +47,7 @@ TilesExporter.prototype.processTile = function (zoom, x, y, mapPool, project) {
     var self = this;
     mapPool.acquire(function (err, map) {
         if (err) throw err;
-        var tile = new Tile(zoom, x, y),
+        var tile = new MetatileBasedTile(zoom, x, y, {size: project.mml.metatile}),
             filepath = path.join(self.options.output, zoom.toString(), x.toString(), y + '.png');
         return tile.render(project, map, function (err, im) {
             if (err) throw err;
