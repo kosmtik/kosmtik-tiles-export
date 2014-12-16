@@ -18,6 +18,8 @@ TilesExporter.prototype.export = function (callback) {
     else bounds = this.project.mml.bounds;
     if (!this.options.output) return this.log('Missing destination dir. Use --output <path/to/dir>');
     this.log('Starting tiles export to', this.options.output);
+    // At the moment there is a problem with TilesExporter.prototype.processZoom. If the value 0 is indicated as MinZoom we get a segfault when trying to render tiles with a negative index value. This simple hack should avoid annoying segfault while searching a permanent solution.
+    if (this.options.minZoom == "0") return this.log('MinZoom must be higher than 0');
     if (this.options.minZoom > this.options.maxZoom) return this.log('Invalid zooms');
     this.log('Starting tiles export, with bounds', bounds, 'and from zoom', this.options.minZoom, 'to', this.options.maxZoom);
     var mapPool = this.project.createMapPool();
