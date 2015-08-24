@@ -14,7 +14,7 @@ util.inherits(TilesExporter, BaseExporter);
 
 TilesExporter.prototype.export = function (callback) {
     var bounds;
-    if (this.options.bounds) bounds = this.options.bounds.split(',').map(function (x) {return +x;});
+    if (this.options.bbox) bounds = this.options.bbox.split(',').map(function (x) {return +x;});
     else bounds = this.project.mml.bounds;
     if (!this.options.output) return this.log('Missing destination dir. Use --output <path/to/dir>');
     this.log('Starting tiles export to', this.options.output);
@@ -53,13 +53,12 @@ TilesExporter.prototype.processTile = function (zoom, x, y, mapPool, project) {
             if (err) throw err;
             im.encode('png', function (err, buffer) {
                 if (err) throw err;
-                // self.log('Dumping tile to', filepath);
                 mkdirs(path.dirname(filepath), function (err) {
                     if (err) throw err;
                     fs.writeFile(filepath, buffer, function (err) {
                         mapPool.release(map);
                         if (err) throw err;
-                    });            
+                    });
                 });
             });
         });
