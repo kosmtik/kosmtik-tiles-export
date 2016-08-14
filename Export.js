@@ -2,6 +2,7 @@ var util = require('util'),
     fs = require('fs'),
     path = require('path'),
     os = require('os'),
+    values = require('object.values'),
     MetatileBasedTile = require(path.join(kosmtik.src, 'back/MetatileBasedTile.js')).Tile,
     mkdirs = require(path.join(kosmtik.src, 'back/Utils.js')).mkdirs,
     zoomLatLngToXY = require(path.join(kosmtik.src, 'back/GeoUtils.js')).zoomLatLngToXY,
@@ -41,25 +42,45 @@ TilesExporter.prototype.processZoom = function (zoom, bounds, mapPool, project, 
         rightBottom = zoomLatLngToXY(zoom, bounds[1], bounds[2]),
         self = this;
     this.log('Processing zoom', zoom);
-    var toProcess = [];
+    var queue = {}, key, metatile = project.mml.metatile || 1, tasks = 0, count = 0;
     for (var x = leftTop[0]; x <= rightBottom[0]; x++) {
         for (var y = leftTop[1]; y <= rightBottom[1]; y++) {
-            toProcess.push([x, y]);
+            key = Math.floor(x / metatile) + '.' + Math.floor(y / + metatile);
+            queue[key] = queue[key] || [];
+            queue[key].push([x, y]);
+            count++;
         }
     }
-    this.log(toProcess.length, 'tiles to process');
+    queue = values(queue);
+    this.log(count, 'tiles to generate');
+    this.log(queue.length, 'metatiles to process');
     function iter (err) {
         if (err) return callback(err);
-        var next = toProcess.pop();
-        if (!next) return callback();
-        if (toProcess.length % 1000 == 0) self.log(toProcess.length, 'tiles to process for zoom', zoom);
-        self.processTile(zoom, next[0], next[1], mapPool, project, iter);
+        var next = queue.pop();
+        if (!next) return done();
+        if (queue.length % 100 == 0) self.log(queue.length, 'metatiles to process for zoom', zoom);
+        self.processMetatile(zoom, next, mapPool, project, iter);
     }
+    function done () {
+        if (!--tasks) return callback();
+    }
+    // Let's run more than one in //.
+    // TODO: add a command line option to control?
     for (var i = 0; i < os.cpus().length / 2; i++) {
-        // Let's run more than one in //.
-        // TODO: add a command line option to control?
+        tasks++;
         iter();
     }
+};
+
+TilesExporter.prototype.processMetatile = function (zoom, tiles, mapPool, project, callback) {
+    var self = this;
+    function iter (err) {
+        if (err) return callback(err);
+        var next = tiles.pop();
+        if (!next) return callback();
+        self.processTile(zoom, next[0], next[1], mapPool, project, iter);
+    };
+    iter();
 };
 
 TilesExporter.prototype.processTile = function (zoom, x, y, mapPool, project, callback) {
