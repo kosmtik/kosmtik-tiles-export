@@ -85,20 +85,24 @@ TilesExporter.prototype.processMetatile = function (zoom, tiles, mapPool, projec
 
 TilesExporter.prototype.processTile = function (zoom, x, y, mapPool, project, callback) {
     // this.log('Processing tile', zoom, x, y);
-    var self = this;
-    mapPool.acquire(function (err, map) {
-        if (err) return callback(err);
-        var tile = new MetatileBasedTile(zoom, x, y, {metatile: project.mml.metatile}),
-            filepath = path.join(self.options.output, zoom.toString(), x.toString(), y + '.png');
-        return tile.render(project, map, function (err, im) {
+    var self = this,
+        filepath = path.join(self.options.output, zoom.toString(), x.toString(), y + '.png');
+    // Do we need an option to overwirte existing tiles?
+    fs.exists(filepath, function (exists) {
+        if (exists) return callback();
+        mapPool.acquire(function (err, map) {
             if (err) return callback(err);
-            im.encode('png', function (err, buffer) {
+            var tile = new MetatileBasedTile(zoom, x, y, {metatile: project.mml.metatile});
+            return tile.render(project, map, function (err, im) {
                 if (err) return callback(err);
-                mkdirs(path.dirname(filepath), function (err) {
+                im.encode('png', function (err, buffer) {
                     if (err) return callback(err);
-                    fs.writeFile(filepath, buffer, function (err) {
-                        mapPool.release(map);
-                        callback(err);
+                    mkdirs(path.dirname(filepath), function (err) {
+                        if (err) return callback(err);
+                        fs.writeFile(filepath, buffer, function (err) {
+                            mapPool.release(map);
+                            callback(err);
+                        });
                     });
                 });
             });
