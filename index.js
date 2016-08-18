@@ -11,5 +11,9 @@ exports.Plugin = function (config) {
         metavar: 'INT',
         default: 18
     });
+    config.commands.export.option('tileFormat', {
+        help: 'Format for tiles (png, jpeg, etc.)',
+        default: 'png'
+    });
     config.registerExporter('tiles', path.join(__dirname, 'Export.js'));
 };

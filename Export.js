@@ -16,33 +16,35 @@ util.inherits(TilesExporter, BaseExporter);
 
 TilesExporter.prototype.export = function (callback) {
     var bounds, self = this;
+    this.tileFormat = this.options.tileFormat;
+    this.ext = this.tileFormat.match(/^[a-z]*/);
     if (this.options.bbox) bounds = this.options.bbox.split(',').map(function (x) {return +x;});
     else bounds = this.project.mml.bounds;
     if (!this.options.output) return this.log('Missing destination dir. Use --output <path/to/dir>');
     this.log('Starting tiles export to', this.options.output);
     if (this.options.minZoom > this.options.maxZoom) return this.log('Invalid zooms');
     this.log('Starting tiles export, with bounds', bounds, 'and from zoom', this.options.minZoom, 'to', this.options.maxZoom);
-    var mapPool = this.project.createMapPool();
+    this.mapPool = this.project.createMapPool();
     var currentZoom = this.options.minZoom;
     function iter (err) {
         if (err) throw err;
         if (currentZoom > self.options.maxZoom) {
-            mapPool.drain(function() {
-                mapPool.destroyAllNow();
+            self.mapPool.drain(function() {
+                self.mapPool.destroyAllNow();
             });
-        } else {
-            self.processZoom(currentZoom++, bounds, mapPool, self.project, iter);
+            return;
         }
+        self.processZoom(currentZoom++, bounds, iter);
     }
     iter();
 };
 
-TilesExporter.prototype.processZoom = function (zoom, bounds, mapPool, project, callback) {
+TilesExporter.prototype.processZoom = function (zoom, bounds, callback) {
     var leftTop = zoomLatLngToXY(zoom, bounds[3], bounds[0]),
         rightBottom = zoomLatLngToXY(zoom, bounds[1], bounds[2]),
         self = this;
     this.log('Processing zoom', zoom);
-    var queue = {}, key, metatile = project.mml.metatile || 1, tasks = 0, count = 0;
+    var queue = {}, key, metatile = self.project.mml.metatile || 1, tasks = 0, count = 0;
     for (var x = leftTop[0]; x <= rightBottom[0]; x++) {
         for (var y = leftTop[1]; y <= rightBottom[1]; y++) {
             key = Math.floor(x / metatile) + '.' + Math.floor(y / + metatile);
@@ -58,49 +60,51 @@ TilesExporter.prototype.processZoom = function (zoom, bounds, mapPool, project, 
         if (err) return callback(err);
         var next = queue.pop();
         if (!next) return done();
+        self.processMetatile(zoom, next, iter);
         if (queue.length % 100 == 0) self.log(queue.length, 'metatiles to process for zoom', zoom);
-        self.processMetatile(zoom, next, mapPool, project, iter);
+        delete next;
     }
     function done () {
         if (!--tasks) return callback();
     }
     // Let's run more than one in //.
     // TODO: add a command line option to control?
-    for (var i = 0; i < os.cpus().length / 2; i++) {
+    for (var i = 0; i < os.cpus().length; i++) {
         tasks++;
         iter();
     }
+    self.log('Running with', tasks, 'tasks');
 };
 
-TilesExporter.prototype.processMetatile = function (zoom, tiles, mapPool, project, callback) {
+TilesExporter.prototype.processMetatile = function (zoom, tiles, callback) {
     var self = this;
     function iter (err) {
-        if (err) return callback(err);
         var next = tiles.pop();
-        if (!next) return callback();
-        self.processTile(zoom, next[0], next[1], mapPool, project, iter);
-    };
+        if (!next || err) return callback(err);
+        self.processTile(zoom, next[0], next[1], iter);
+        delete next;
+    }
     iter();
 };
 
-TilesExporter.prototype.processTile = function (zoom, x, y, mapPool, project, callback) {
+TilesExporter.prototype.processTile = function (zoom, x, y, callback) {
     // this.log('Processing tile', zoom, x, y);
     var self = this,
-        filepath = path.join(self.options.output, zoom.toString(), x.toString(), y + '.png');
-    // Do we need an option to overwirte existing tiles?
+        filepath = path.join(self.options.output, zoom.toString(), x.toString(), y + '.' + this.ext);
+    // Do we need an option to overwrite existing tiles?
     fs.exists(filepath, function (exists) {
         if (exists) return callback();
-        mapPool.acquire(function (err, map) {
+        self.mapPool.acquire(function (err, map) {
             if (err) return callback(err);
-            var tile = new MetatileBasedTile(zoom, x, y, {metatile: project.mml.metatile});
-            return tile.render(project, map, function (err, im) {
+            var tile = new MetatileBasedTile(zoom, x, y, {metatile: self.project.mml.metatile});
+            return tile.render(self.project, map, function (err, im) {
                 if (err) return callback(err);
-                im.encode('png', function (err, buffer) {
+                im.encode(self.tileFormat, function (err, buffer) {
                     if (err) return callback(err);
                     mkdirs(path.dirname(filepath), function (err) {
                         if (err) return callback(err);
                         fs.writeFile(filepath, buffer, function (err) {
-                            mapPool.release(map);
+                            self.mapPool.release(map);
                             callback(err);
                         });
                     });
