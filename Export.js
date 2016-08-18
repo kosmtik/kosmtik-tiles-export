@@ -18,6 +18,7 @@ TilesExporter.prototype.export = function (callback) {
     var bounds, self = this;
     this.tileFormat = this.options.tileFormat;
     this.ext = this.tileFormat.match(/^[a-z]*/);
+    this.workers = this.options.workers || os.cpus().length;
     if (this.options.bbox) bounds = this.options.bbox.split(',').map(function (x) {return +x;});
     else bounds = this.project.mml.bounds;
     if (!this.options.output) return this.log('Missing destination dir. Use --output <path/to/dir>');
@@ -44,7 +45,7 @@ TilesExporter.prototype.processZoom = function (zoom, bounds, callback) {
         rightBottom = zoomLatLngToXY(zoom, bounds[1], bounds[2]),
         self = this;
     this.log('Processing zoom', zoom);
-    var queue = {}, key, metatile = self.project.mml.metatile || 1, tasks = 0, count = 0;
+    var queue = {}, key, metatile = self.project.mml.metatile || 1, workers = 0, count = 0;
     for (var x = leftTop[0]; x <= rightBottom[0]; x++) {
         for (var y = leftTop[1]; y <= rightBottom[1]; y++) {
             key = Math.floor(x / metatile) + '.' + Math.floor(y / + metatile);
@@ -65,15 +66,13 @@ TilesExporter.prototype.processZoom = function (zoom, bounds, callback) {
         delete next;
     }
     function done () {
-        if (!--tasks) return callback();
+        if (!--workers) return callback();
     }
-    // Let's run more than one in //.
-    // TODO: add a command line option to control?
-    for (var i = 0; i < os.cpus().length; i++) {
-        tasks++;
+    for (var i = 0; i < this.workers; i++) {
+        workers++;
         iter();
     }
-    self.log('Running with', tasks, 'tasks');
+    self.log('Running with', workers, 'worker(s)');
 };
 
 TilesExporter.prototype.processMetatile = function (zoom, tiles, callback) {

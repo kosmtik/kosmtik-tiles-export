@@ -15,5 +15,9 @@ exports.Plugin = function (config) {
         help: 'Format for tiles (png, jpeg, etc.)',
         default: 'png'
     });
+    config.commands.export.option('workers', {
+        help: 'Number of workers to run (default to the number of CPUs)',
+        metavar: 'INT'
+    });
     config.registerExporter('tiles', path.join(__dirname, 'Export.js'));
 };
