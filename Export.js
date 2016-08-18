@@ -19,7 +19,7 @@ TilesExporter.prototype.export = function (callback) {
     this.tileFormat = this.options.tileFormat;
     this.ext = this.tileFormat.match(/^[a-z]*/);
     this.workers = this.options.workers || os.cpus().length;
-    if (this.options.bbox) bounds = this.options.bbox.split(',').map(function (x) {return +x;});
+    if (this.options.bounds) bounds = this.options.bounds.split(',').map(function (x) {return +x;});
     else bounds = this.project.mml.bounds;
     if (!this.options.output) return this.log('Missing destination dir. Use --output <path/to/dir>');
     this.log('Starting tiles export to', this.options.output);
