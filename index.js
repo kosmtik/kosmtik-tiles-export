@@ -16,7 +16,7 @@ exports.Plugin = function (config) {
         default: 'png'
     });
     config.commands.export.option('workers', {
-        help: 'Number of workers to run (default to the number of CPUs)',
+        help: 'Number of workers to run [Default: number of CPUs]',
         metavar: 'INT'
     });
     config.commands.export.option('overwrite', {
