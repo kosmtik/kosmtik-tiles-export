@@ -92,7 +92,7 @@ TilesExporter.prototype.processTile = function (zoom, x, y, callback) {
         filepath = path.join(self.options.output, zoom.toString(), x.toString(), y + '.' + this.ext);
     // Do we need an option to overwrite existing tiles?
     fs.exists(filepath, function (exists) {
-        if (exists) return callback();
+        if (exists && !self.options.overwrite) return callback();
         self.mapPool.acquire(function (err, map) {
             if (err) return callback(err);
             var tile = new MetatileBasedTile(zoom, x, y, {metatile: self.project.mml.metatile});

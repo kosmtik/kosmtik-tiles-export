@@ -19,5 +19,9 @@ exports.Plugin = function (config) {
         help: 'Number of workers to run (default to the number of CPUs)',
         metavar: 'INT'
     });
+    config.commands.export.option('overwrite', {
+        flag: true,
+        help: 'Overwrite existing tiles instead of skiping.'
+    });
     config.registerExporter('tiles', path.join(__dirname, 'Export.js'));
 };
