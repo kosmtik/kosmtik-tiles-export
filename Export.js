@@ -2,7 +2,6 @@ var util = require('util'),
     fs = require('fs'),
     path = require('path'),
     os = require('os'),
-    values = require('object.values'),
     MetatileBasedTile = require(path.join(kosmtik.src, 'back/MetatileBasedTile.js')).Tile,
     mkdirs = require(path.join(kosmtik.src, 'back/Utils.js')).mkdirs,
     zoomLatLngToXY = require(path.join(kosmtik.src, 'back/GeoUtils.js')).zoomLatLngToXY,
@@ -25,6 +24,8 @@ TilesExporter.prototype.export = function (callback) {
     this.log('Starting tiles export to', this.options.output);
     if (this.options.minZoom > this.options.maxZoom) return this.log('Invalid zooms');
     this.log('Starting tiles export, with bounds', bounds, 'and from zoom', this.options.minZoom, 'to', this.options.maxZoom);
+    this.metatile = this.project.mml.metatile || 1;
+    this.log('Using metatiles of', this.metatile);
     this.mapPool = this.project.createMapPool();
     var currentZoom = this.options.minZoom;
     function iter (err) {
@@ -44,25 +45,20 @@ TilesExporter.prototype.processZoom = function (zoom, bounds, callback) {
     var leftTop = zoomLatLngToXY(zoom, bounds[3], bounds[0]),
         rightBottom = zoomLatLngToXY(zoom, bounds[1], bounds[2]),
         self = this;
-    this.log('Processing zoom', zoom);
-    var queue = {}, key, metatile = self.project.mml.metatile || 1, workers = 0, count = 0;
-    for (var x = leftTop[0]; x <= rightBottom[0]; x++) {
-        for (var y = leftTop[1]; y <= rightBottom[1]; y++) {
-            key = Math.floor(x / metatile) + '.' + Math.floor(y / + metatile);
-            queue[key] = queue[key] || [];
-            queue[key].push([x, y]);
-            count++;
+    this.log('** Processing zoom', zoom);
+    var queue = [], key, workers = 0;
+    for (var x = leftTop[0]; x <= rightBottom[0]; x += this.metatile) {
+        for (var y = leftTop[1]; y <= rightBottom[1]; y += this.metatile) {
+            queue.push([x, y]);
         }
     }
-    queue = values(queue);
-    this.log(count, 'tiles to generate');
-    this.log(queue.length, 'metatiles to process');
+    this.log(new Date().toUTCString(), '—', queue.length, 'metatiles to process (approx.', queue.length * this.metatile * this.metatile, 'tiles)');
     function iter (err) {
         if (err) return callback(err);
         var next = queue.pop();
         if (!next) return done();
-        self.processMetatile(zoom, next, iter);
-        if (queue.length % 100 == 0) self.log(queue.length, 'metatiles to process for zoom', zoom);
+        self.processMetatile(zoom, next[0], next[1], iter);
+        if (queue.length % 100 == 0) self.log(new Date().toUTCString(), '—', queue.length, 'metatiles to process for zoom', zoom);
         delete next;
     }
     function done () {
@@ -75,8 +71,13 @@ TilesExporter.prototype.processZoom = function (zoom, bounds, callback) {
     self.log('Running with', workers, 'worker(s)');
 };
 
-TilesExporter.prototype.processMetatile = function (zoom, tiles, callback) {
-    var self = this;
+TilesExporter.prototype.processMetatile = function (zoom, left, top, callback) {
+    var self = this, tiles = [];
+    for (var x = left; x < left + this.metatile; x++) {
+        for (var y = top; y < top + this.metatile; y++) {
+            tiles.push([x, y]);
+        }
+    }
     function iter (err) {
         var next = tiles.pop();
         if (!next || err) return callback(err);
