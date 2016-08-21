@@ -24,9 +24,11 @@ TilesExporter.prototype.export = function (callback) {
     this.log('Starting tiles export to', this.options.output);
     if (this.options.minZoom > this.options.maxZoom) return this.log('Invalid zooms');
     this.log('Starting tiles export, with bounds', bounds, 'and from zoom', this.options.minZoom, 'to', this.options.maxZoom);
-    this.metatile = this.project.mml.metatile || 1;
+    this.metatile = this.project.metatile();
     this.log('Using metatiles of', this.metatile);
-    this.mapPool = this.project.createMapPool();
+    this.size = this.options.tileSize;
+    this.log('Tile size is', this.size);
+    this.mapPool = this.project.createMapPool({size: this.size * this.metatile});
     var currentZoom = this.options.minZoom;
     function iter (err) {
         if (err) throw err;
@@ -46,13 +48,13 @@ TilesExporter.prototype.processZoom = function (zoom, bounds, callback) {
         rightBottom = zoomLatLngToXY(zoom, bounds[1], bounds[2]),
         self = this;
     this.log('** Processing zoom', zoom);
-    var queue = [], key, workers = 0;
-    for (var x = leftTop[0]; x <= rightBottom[0]; x += this.metatile) {
-        for (var y = leftTop[1]; y <= rightBottom[1]; y += this.metatile) {
+    var queue = [], key, workers = 0, scale = this.size / 256;
+    for (var x = Math.floor(leftTop[0] / scale); x <= (rightBottom[0] / scale); x += this.metatile) {
+        for (var y = Math.floor(leftTop[1] / scale); y <= (rightBottom[1] / scale); y += this.metatile) {
             queue.push([x, y]);
         }
     }
-    this.log(new Date().toUTCString(), '—', queue.length, 'metatiles to process (approx.', queue.length * this.metatile * this.metatile, 'tiles)');
+    this.log(new Date().toUTCString(), '—', queue.length, 'metatiles to process (', queue.length * this.metatile * this.metatile, 'tiles)');
     function iter (err) {
         if (err) return callback(err);
         var next = queue.pop();
@@ -96,7 +98,7 @@ TilesExporter.prototype.processTile = function (zoom, x, y, callback) {
         if (exists && !self.options.overwrite) return callback();
         self.mapPool.acquire(function (err, map) {
             if (err) return callback(err);
-            var tile = new MetatileBasedTile(zoom, x, y, {metatile: self.project.mml.metatile});
+            var tile = new MetatileBasedTile(zoom, x, y, {metatile: self.project.mml.metatile, size: self.size});
             return tile.render(self.project, map, function (err, im) {
                 if (err) return callback(err);
                 im.encode(self.tileFormat, function (err, buffer) {

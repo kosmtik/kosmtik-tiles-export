@@ -15,6 +15,11 @@ exports.Plugin = function (config) {
         help: 'Format for tiles (png, jpeg, etc.)',
         default: 'png'
     });
+    config.commands.export.option('tileSize', {
+        help: 'Format for tiles (png, jpeg, etc.)',
+        metavar: 'INT',
+        default: 256
+    });
     config.commands.export.option('workers', {
         help: 'Number of workers to run [Default: number of CPUs]',
         metavar: 'INT'
