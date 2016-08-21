@@ -102,7 +102,7 @@ TilesExporter.prototype.processTile = function (zoom, x, y, callback) {
         if (exists && !self.options.overwrite) return callback();
         self.mapPool.acquire(function (err, map) {
             if (err) return callback(err);
-            var tile = new MetatileBasedTile(zoom, x, y, {metatile: self.project.mml.metatile, size: self.size});
+            var tile = new MetatileBasedTile(zoom, x, y, {metatile: self.project.metatile(), size: self.size});
             return tile.render(self.project, map, function (err, im) {
                 if (err) return callback(err);
                 im.encode(self.tileFormat, function (err, buffer) {
