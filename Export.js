@@ -48,9 +48,13 @@ TilesExporter.prototype.processZoom = function (zoom, bounds, callback) {
         rightBottom = zoomLatLngToXY(zoom, bounds[1], bounds[2]),
         self = this;
     this.log('** Processing zoom', zoom);
-    var queue = [], key, workers = 0, scale = this.size / 256;
-    for (var x = Math.floor(leftTop[0] / scale); x <= (rightBottom[0] / scale); x += this.metatile) {
-        for (var y = Math.floor(leftTop[1] / scale); y <= (rightBottom[1] / scale); y += this.metatile) {
+    var queue = [], key, workers = 0, scale = this.size / 256,
+        minX = Math.floor(leftTop[0] / scale),
+        minY = Math.floor(leftTop[1] / scale);
+    minX = minX - (minX % this.metatile);
+    minY = minY - (minY % this.metatile);
+    for (var x = minX; x <= (rightBottom[0] / scale); x += this.metatile) {
+        for (var y = minY; y <= (rightBottom[1] / scale); y += this.metatile) {
             queue.push([x, y]);
         }
     }
