@@ -33,4 +33,4 @@ class ExportTilesPlugin {
     }
 }
 
-exports = { Plugin: ExportTilesPlugin }
+exports = module.exports = { Plugin: ExportTilesPlugin }
