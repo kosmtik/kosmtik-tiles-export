@@ -1,4 +1,3 @@
-
 var fs = require('fs'),
     path = require('path'),
     os = require('os'),
@@ -117,4 +116,4 @@ class TilesExporter extends BaseExporter {
     };
 }
 
-exports = { Exporter: TilesExporter };
+exports = module.exports = { Exporter: TilesExporter };
