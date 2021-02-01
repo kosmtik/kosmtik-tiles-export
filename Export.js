@@ -60,7 +60,6 @@ class TilesExporter extends BaseExporter {
             if (!next) return done();
             self.processMetatile(zoom, next[0], next[1], iter);
             if (queue.length % 100 == 0) self.log(new Date().toUTCString(), '—', queue.length, 'metatiles to process for zoom', zoom);
-            delete next;
         }
         function done () {
             if (!--workers) return callback();
@@ -83,7 +82,6 @@ class TilesExporter extends BaseExporter {
             var next = tiles.pop();
             if (!next || err) return callback(err);
             self.processTile(zoom, next[0], next[1], iter);
-            delete next;
         }
         iter();
     };
